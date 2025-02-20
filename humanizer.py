@@ -20,21 +20,21 @@ class AdvancedHumanizer:
     def __init__(self):
         self.synonym_cache = {}
         self.common_ai_phrases = {
-            "Moreover": ["Also", "Besides", "Plus", "On top of that", "And", "What’s more"],
-            "Additionally": ["Furthermore", "Also", "On top of that", "Plus", "Another thing", "On the other hand"],
-            "Furthermore": ["Moreover", "Also", "Besides", "Plus", "And", "What’s more"],
-            "However": ["But", "Yet", "Still", "Though", "Even so", "Nonetheless"],
-            "Therefore": ["So", "Thus", "Hence", "As a result", "That’s why", "Because of that"]
+            "Moreover": ["Additionally", "Furthermore", "In addition", "Likewise", "As well"],
+            "Additionally": ["Furthermore", "Moreover", "In addition", "Also", "Similarly"],
+            "Furthermore": ["Moreover", "Additionally", "In addition", "Likewise", "And"],
+            "However": ["Nevertheless", "Nonetheless", "Yet", "Still", "On the other hand"],
+            "Therefore": ["Thus", "Hence", "Consequently", "As a result", "For that reason"]
         }
         self.human_phrases = {
-            "casual": ["you know", "I think", "kinda", "sorta", "tbh", "just saying", "no kidding", "if you ask me"],
-            "formal": ["in my view", "it appears that", "arguably", "it might be said", "one could argue"],
-            "mixed": ["to be honest", "for what it’s worth", "believe it or not", "frankly"]
+            "casual": ["in my opinion", "as observed", "indeed"],  # Subtle, minimal
+            "formal": ["in my view", "it appears", "evidently"],
+            "mixed": ["to be frank", "essentially", "notably"]
         }
-        self.slang = {"you": ["u"], "are": ["r"], "going to": ["gonna"], "want to": ["wanna"], "have to": ["hafta"]}
-        self.punctuation_variations = ['.', '!', '?', '...', '!?', '..', '!.']
-        self.emoticons = [":)", ":(", ";)", ":D", ":P", "lol", "haha", "meh", ":/"]
-        self.typos = {"the": ["teh", "hte"], "and": ["an", "nad"], "is": ["si", "is"], "to": ["ot", "to"]}
+        self.slang = {}  # No slang
+        self.punctuation_variations = ['.', '?']  # Formal only
+        self.emoticons = []  # No emojis
+        self.typos = {}  # No typos
         self.stop_words = set(stopwords.words('english'))
         try:
             self.sentiment_analyzer = SentimentIntensityAnalyzer()
@@ -43,8 +43,7 @@ class AdvancedHumanizer:
             self.sentiment_analyzer = None
 
         self.personal_touches = [
-            "last week I noticed something similar", "in my experience", "from what I’ve seen", "I remember reading that",
-            "a friend mentioned this once", "it reminds me of something"
+            "from my analysis", "based on observations", "considering the context"
         ]
 
     def detect_tone(self, text):
@@ -83,34 +82,20 @@ class AdvancedHumanizer:
                         synonym = lemma.name().replace("_", " ")
                         if synonym != word and synonym.lower() not in string.punctuation and synonym.lower() not in self.stop_words:
                             synonyms.append(synonym)
-            self.synonym_cache[word] = synonyms[:5] or [word]
+            self.synonym_cache[word] = synonyms[:3] or [word]  # Fewer synonyms for subtlety
             return self.synonym_cache[word]
         except Exception as e:
             print(f"Error getting synonyms: {e}")
             return [word]
 
     def introduce_errors(self, sentence, tone):
-        try:
-            words = self._safe_tokenize(sentence)
-            for i, word in enumerate(words):
-                if tone != "formal" and word.lower() in self.typos and random.random() < 0.08:
-                    words[i] = random.choice(self.typos[word.lower()])
-                if tone != "formal" and word.lower() in self.slang and random.random() < 0.12:
-                    words[i] = random.choice(self.slang[word.lower()])
-            return " ".join(words)
-        except Exception as e:
-            print(f"Error introducing errors: {e}")
-            return sentence
+        return sentence  # No errors
 
     def vary_sentence_length(self, sentence, tone):
         try:
             words = self._safe_tokenize(sentence)
-            if len(words) > 12 and random.random() < 0.6:
+            if len(words) > 12 and random.random() < 0.3:  # Lowered from 0.6
                 words = words[:random.randint(6, len(words) // 2)]
-                if tone != "formal" and random.random() < 0.4:
-                    words.append(random.choice(self.human_phrases.get(tone, self.human_phrases["mixed"])))
-            elif len(words) < 6 and random.random() < 0.5:
-                words.extend(random.choice(self.human_phrases.get(tone, self.human_phrases["mixed"])).split() + [random.choice([".", "!"])])
             return " ".join(words)
         except Exception as e:
             print(f"Error varying sentence length: {e}")
@@ -128,17 +113,13 @@ class AdvancedHumanizer:
 
     def add_human_touch(self, sentence, tone):
         try:
-            if random.random() < 0.4:
+            if random.random() < 0.05:  # Drastically lowered from 0.4/0.2—rare insertion
                 insert_pos = random.randint(0, len(sentence.split()))
                 words = sentence.split()
                 phrase_set = self.human_phrases.get(tone, self.human_phrases["mixed"])
                 words.insert(insert_pos, random.choice(phrase_set))
                 sentence = " ".join(words)
-            if tone != "formal" and random.random() < 0.25:
-                sentence += " " + random.choice(self.emoticons)
-            if tone != "formal" and random.random() < 0.15:
-                sentence += random.choice([" lol", " haha", " right?", " ya know"])
-            if random.random() < 0.1:
+            if random.random() < 0.02:  # Very rare—mimics Tkinter sparsity
                 sentence = random.choice(self.personal_touches) + ", " + sentence
             return sentence
         except Exception as e:
@@ -148,20 +129,15 @@ class AdvancedHumanizer:
     def restructure_sentence(self, sentence):
         try:
             words = self._safe_tokenize(sentence)
-            if len(words) > 6 and random.random() < 0.5:
+            if len(words) > 10 and random.random() < 0.2:  # Rarer, longer threshold
                 try:
                     pos_tags = nltk.pos_tag(words)
                     nouns = [word for word, pos in pos_tags if pos.startswith('NN')]
                     verbs = [word for word, pos in pos_tags if pos.startswith('VB')]
                     if nouns and verbs:
                         new_order = []
-                        order_type = random.choice(["noun_verb", "verb_noun"])
-                        if order_type == "noun_verb":
-                            new_order.extend(random.sample(nouns, min(2, len(nouns))))
-                            new_order.extend(random.sample(verbs, min(1, len(verbs))))
-                        else:
-                            new_order.extend(random.sample(verbs, min(1, len(verbs))))
-                            new_order.extend(random.sample(nouns, min(2, len(nouns))))
+                        new_order.extend(random.sample(nouns, min(1, len(nouns))))  # Fewer words
+                        new_order.extend(random.sample(verbs, min(1, len(verbs))))
                         remaining = [w for w in words if w not in nouns and w not in verbs]
                         random.shuffle(remaining)
                         new_order.extend(remaining)
@@ -176,12 +152,8 @@ class AdvancedHumanizer:
     def adjust_tone(self, sentence, original_tone):
         try:
             if original_tone == "formal":
-                if random.random() < 0.2:
-                    sentence = re.sub(r'\bis\b', random.choice(["seems to be", "appears to be"]), sentence, 1)
-                    sentence = re.sub(r'\bwill\b', random.choice(["might", "could"]), sentence, 1)
-            elif original_tone == "casual":
-                if random.random() < 0.3:
-                    sentence += random.choice([" dude", " seriously"])
+                if random.random() < 0.1:  # Subtle tweak
+                    sentence = re.sub(r'\bis\b', "appears to be", sentence, 1)
             return sentence
         except Exception as e:
             print(f"Error adjusting tone: {e}")
@@ -222,19 +194,12 @@ class AdvancedHumanizer:
                     sentence = self.vary_sentence_length(sentence, tone)
                     sentence = self.restructure_sentence(sentence)
                     sentence = self.add_human_touch(sentence, tone)
-                    sentence = self.introduce_errors(sentence, tone)
                     sentence = self.adjust_tone(sentence, tone)
-                    if random.random() < 0.25:
-                        last_char = sentence[-1] if sentence else ''
-                        if last_char in string.punctuation:
-                            sentence = sentence.rstrip(last_char) + random.choice(self.punctuation_variations)
                     humanized_sentences.append(sentence)
                 except Exception as e:
                     print(f"Error processing sentence '{sentence}': {e}")
                     humanized_sentences.append(sentence)
             final_text = " ".join(humanized_sentences).strip()
-            if random.random() < 0.12:
-                final_text += "\n\n" + random.choice(["Anyway,", "So yeah,", "That’s it,", "For now,"]) + " " + random.choice(self.emoticons if tone != "formal" else [""])
             if not final_text:
                 return "Humanization resulted in no output. Original text returned."
             return final_text
