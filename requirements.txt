@@ -2,3 +2,4 @@ flask
 nltk
 python-docx
 gunicorn
+reportlab  # New for PDF export

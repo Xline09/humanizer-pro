@@ -4,6 +4,8 @@ from io import BytesIO
 import os
 from werkzeug.utils import secure_filename
 from docx import Document
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'
@@ -22,6 +24,7 @@ def home():
     original_text = session.get('original_text', '')
     humanized_text = session.get('humanized_text', '')
     selected_tone = request.form.get('tone', 'auto') if request.method == 'POST' else 'auto'
+    formality_level = int(request.form.get('formality', 50)) if request.method == 'POST' else 50
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -31,7 +34,7 @@ def home():
             session['undo_stack'].append({'input': original_text, 'output': humanized_text})
             session['redo_stack'] = []
             try:
-                humanized_text = humanizer.humanize(original_text)
+                humanized_text = humanizer.humanize(original_text, formality_level)
                 if selected_tone != 'auto':
                     humanized_text = humanizer.adjust_tone(humanized_text, selected_tone)
             except Exception as e:
@@ -60,6 +63,23 @@ def home():
                 file = BytesIO(humanized_text.encode('utf-8'))
                 return send_file(file, as_attachment=True, download_name='humanized_text.txt', mimetype='text/plain')
 
+        elif action == 'save_pdf':
+            if humanized_text.strip():
+                buffer = BytesIO()
+                c = canvas.Canvas(buffer, pagesize=letter)
+                width, height = letter
+                lines = humanized_text.split('\n')
+                y = height - 40
+                for line in lines:
+                    if y < 40:
+                        c.showPage()
+                        y = height - 40
+                    c.drawString(40, y, line)
+                    y -= 15
+                c.save()
+                buffer.seek(0)
+                return send_file(buffer, as_attachment=True, download_name='humanized_text.pdf', mimetype='application/pdf')
+
         elif action == 'upload' and 'file' in request.files:
             file = request.files['file']
             if file and file.filename:
@@ -76,7 +96,7 @@ def home():
                     original_text = "Unsupported file format. Please upload .txt or .docx."
                     humanized_text = ""
                 if original_text and original_text != "Unsupported file format. Please upload .txt or .docx.":
-                    humanized_text = humanizer.humanize(original_text)
+                    humanized_text = humanizer.humanize(original_text, formality_level)
 
         session['original_text'] = original_text
         session['humanized_text'] = humanized_text
@@ -85,15 +105,16 @@ def home():
     word_count = len(original_text.split()) if original_text else 0
     char_count = len(original_text)
     return render_template('index.html', original=original_text, result=humanized_text, tone=selected_tone, 
-                           word_count=word_count, char_count=char_count,
+                           formality=formality_level, word_count=word_count, char_count=char_count,
                            can_undo=len(session['undo_stack']) > 0, can_redo=len(session['redo_stack']) > 0)
 
 @app.route('/preview', methods=['POST'])
 def preview():
     text = request.form.get('text', '')
     tone = request.form.get('tone', 'auto')
+    formality = int(request.form.get('formality', 50))
     if text.strip():
-        preview_text = humanizer.humanize(text[:100])
+        preview_text = humanizer.humanize(text[:100], formality)
         if tone != 'auto':
             preview_text = humanizer.adjust_tone(preview_text, tone)
         return jsonify({'preview': preview_text})
