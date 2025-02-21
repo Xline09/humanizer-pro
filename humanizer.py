@@ -17,7 +17,7 @@ class AdvancedHumanizer:
         self.phrase_map = {
             "Moreover": ["Furthermore", "In addition", "Besides", "Likewise", "Also"],
             "Additionally": ["Furthermore", "Moreover", "Plus", "In addition", "Besides"],
-            "Furthermore": ["Moreover", "Also", "In addition", "Besides", "And"],
+            "Furthermore": ["Moreover", "In addition", "Besides", "Also", "And"],
             "However": ["Nonetheless", "Nevertheless", "Yet", "Still", "Conversely"],
             "Therefore": ["Thus", "Hence", "Consequently", "As a result", "For that reason"],
             "Dividing": ["Segmenting", "Partitioning", "Splitting", "Separating", "Categorizing"],
@@ -66,6 +66,7 @@ class AdvancedHumanizer:
             if not original:
                 return original, []
             words = self._safe_tokenize(original)
+            pos_tags = nltk.pos_tag(words) if nltk.pos_tag else [(w, 'NN') for w in words]
             changes = []
 
             # Replace key phrases
@@ -77,9 +78,8 @@ class AdvancedHumanizer:
 
             # Synonym substitution
             new_words = []
-            pos_tags = nltk.pos_tag(words) if nltk.pos_tag else [(w, 'NN') for w in words]  # Fallback POS
             for word, pos in pos_tags:
-                if random.random() < 0.9:  # High chance for change
+                if random.random() < 0.9:
                     new_word, word_changes = self.get_synonym(word, pos)
                     new_words.append(new_word)
                     changes.extend(word_changes)
@@ -87,12 +87,14 @@ class AdvancedHumanizer:
                     new_words.append(word)
             sentence = " ".join(new_words)
 
-            # Shuffle structure
-            if len(new_words) > 2:
-                shuffled_words = new_words.copy()
-                random.shuffle(shuffled_words)
-                sentence = " ".join(shuffled_words)
-                changes.extend([w for w in words if w not in shuffled_words or words.index(w) != shuffled_words.index(w)])
+            # Controlled restructuring (preserve readability)
+            if len(words) > 3 and random.random() < 0.8:
+                mid = len(new_words) // 2
+                first_half = new_words[:mid]
+                second_half = new_words[mid:]
+                random.shuffle(second_half)
+                sentence = " ".join(first_half + second_half)
+                changes.extend([w for w in words if w not in new_words or words.index(w) != new_words.index(w)])
 
             # Add connector
             connector = random.choice(self.connectors)
