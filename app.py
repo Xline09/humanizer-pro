@@ -23,6 +23,7 @@ def home():
 
     original_text = session.get('original_text', '')
     humanized_text = session.get('humanized_text', '')
+    changes = session.get('changes', [])
     selected_tone = request.form.get('tone', 'auto') if request.method == 'POST' else 'auto'
     formality_level = int(request.form.get('formality', 50)) if request.method == 'POST' else 50
 
@@ -31,32 +32,37 @@ def home():
         original_text = request.form.get('text', '')
 
         if action == 'humanize' and original_text.strip():
-            session['undo_stack'].append({'input': original_text, 'output': humanized_text})
+            session['undo_stack'].append({'input': original_text, 'output': humanized_text, 'changes': changes})
             session['redo_stack'] = []
             try:
-                humanized_text = humanizer.humanize(original_text, formality_level)
+                humanized_text, changes = humanizer.humanize(original_text, formality_level)
                 if selected_tone != 'auto':
-                    humanized_text = humanizer.adjust_tone(humanized_text, selected_tone)
+                    humanized_text, tone_changes = humanizer.adjust_tone(humanized_text, selected_tone)
+                    changes.extend(tone_changes)
             except Exception as e:
                 humanized_text = f"Failed to humanize: {str(e)}. Original: {original_text}"
+                changes = []
 
         elif action == 'clear':
             session['undo_stack'] = []
             session['redo_stack'] = []
             original_text = ''
             humanized_text = ''
+            changes = []
 
         elif action == 'undo' and session['undo_stack']:
             last_state = session['undo_stack'].pop()
-            session['redo_stack'].append({'input': original_text, 'output': humanized_text})
+            session['redo_stack'].append({'input': original_text, 'output': humanized_text, 'changes': changes})
             original_text = last_state['input']
             humanized_text = last_state['output']
+            changes = last_state['changes']
 
         elif action == 'redo' and session['redo_stack']:
             next_state = session['redo_stack'].pop()
-            session['undo_stack'].append({'input': original_text, 'output': humanized_text})
+            session['undo_stack'].append({'input': original_text, 'output': humanized_text, 'changes': changes})
             original_text = next_state['input']
             humanized_text = next_state['output']
+            changes = next_state['changes']
 
         elif action == 'save':
             if humanized_text.strip():
@@ -96,15 +102,16 @@ def home():
                     original_text = "Unsupported file format. Please upload .txt or .docx."
                     humanized_text = ""
                 if original_text and original_text != "Unsupported file format. Please upload .txt or .docx.":
-                    humanized_text = humanizer.humanize(original_text, formality_level)
+                    humanized_text, changes = humanizer.humanize(original_text, formality_level)
 
         session['original_text'] = original_text
         session['humanized_text'] = humanized_text
+        session['changes'] = changes
         session.modified = True
 
     word_count = len(original_text.split()) if original_text else 0
     char_count = len(original_text)
-    return render_template('index.html', original=original_text, result=humanized_text, tone=selected_tone, 
+    return render_template('index.html', original=original_text, result=humanized_text, changes=changes, tone=selected_tone, 
                            formality=formality_level, word_count=word_count, char_count=char_count,
                            can_undo=len(session['undo_stack']) > 0, can_redo=len(session['redo_stack']) > 0)
 
@@ -114,11 +121,12 @@ def preview():
     tone = request.form.get('tone', 'auto')
     formality = int(request.form.get('formality', 50))
     if text.strip():
-        preview_text = humanizer.humanize(text[:100], formality)
+        preview_text, changes = humanizer.humanize(text[:100], formality)
         if tone != 'auto':
-            preview_text = humanizer.adjust_tone(preview_text, tone)
-        return jsonify({'preview': preview_text})
-    return jsonify({'preview': ''})
+            preview_text, tone_changes = humanizer.adjust_tone(preview_text, tone)
+            changes.extend(tone_changes)
+        return jsonify({'preview': preview_text, 'changes': changes})
+    return jsonify({'preview': '', 'changes': []})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

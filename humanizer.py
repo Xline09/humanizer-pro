@@ -5,6 +5,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import wordnet, stopwords
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import string
+import difflib  # New for diff tracking
 
 try:
     nltk.download('punkt', quiet=True)
@@ -83,57 +84,70 @@ class AdvancedHumanizer:
                         if synonym != word and synonym.lower() not in string.punctuation and synonym.lower() not in self.stop_words:
                             synonyms.append(synonym)
             self.synonym_cache[word] = synonyms[:3] or [word]
-            return random.choice(self.synonym_cache[word]) if synonyms and random.random() < 0.7 else word  # 70% synonym use
+            chosen = random.choice(self.synonym_cache[word]) if synonyms and random.random() < 0.7 else word
+            return chosen, synonyms and chosen != word  # Return synonym and whether it changed
         except Exception as e:
             print(f"Error getting synonyms: {e}")
-            return word
+            return word, False
 
     def introduce_errors(self, sentence, tone):
-        return sentence
+        return sentence, []  # No errors, no changes
 
     def vary_sentence_length(self, sentence, tone):
         try:
             words = self._safe_tokenize(sentence)
-            if len(words) > 12 and random.random() < 0.15:  # Subtle variation
+            original_words = words.copy()
+            if len(words) > 12 and random.random() < 0.15:
                 split_point = random.randint(6, len(words) - 1)
-                return " ".join(words[:split_point])
-            return sentence
+                words = words[:split_point]
+            changed = words != original_words
+            return " ".join(words), [w for w in original_words if w not in words] if changed else []
         except Exception as e:
             print(f"Error varying sentence length: {e}")
-            return sentence
+            return sentence, []
 
     def replace_ai_phrases(self, sentence, tone):
         try:
+            original = sentence
+            changes = []
             for ai_phrase, alternatives in self.common_ai_phrases.items():
                 if ai_phrase in sentence:
                     choice = random.choice(alternatives)
+                    if choice != ai_phrase:
+                        changes.append(ai_phrase)
                     sentence = sentence.replace(ai_phrase, choice)
-            return sentence
+            return sentence, changes if sentence != original else []
         except Exception as e:
             print(f"Error replacing AI phrases: {e}")
-            return sentence
+            return sentence, []
 
     def add_human_touch(self, sentence, tone, formality_level=50):
         try:
-            # Formality_level (0-100) controls phrase insertion
-            insertion_chance = formality_level / 1000  # 0% at 0, 10% at 100
+            original = sentence
+            changes = []
+            insertion_chance = formality_level / 1000
             if random.random() < insertion_chance:
                 insert_pos = random.randint(0, len(sentence.split()))
                 words = sentence.split()
                 phrase_set = self.human_phrases.get(tone, self.human_phrases["mixed"])
-                words.insert(insert_pos, random.choice(phrase_set))
+                phrase = random.choice(phrase_set)
+                words.insert(insert_pos, phrase)
+                changes.append(phrase)
                 sentence = " ".join(words)
-            if random.random() < insertion_chance / 2:  # Half chance for personal touch
-                sentence = random.choice(self.personal_touches) + ", " + sentence
-            return sentence
+            if random.random() < insertion_chance / 2:
+                touch = random.choice(self.personal_touches)
+                sentence = f"{touch}, {sentence}"
+                changes.append(touch)
+            return sentence, changes if sentence != original else []
         except Exception as e:
             print(f"Error adding human touch: {e}")
-            return sentence
+            return sentence, []
 
     def restructure_sentence(self, sentence):
         try:
             words = self._safe_tokenize(sentence)
-            if len(words) > 10 and random.random() < 0.1:  # Very rare
+            original_words = words.copy()
+            if len(words) > 10 and random.random() < 0.1:
                 try:
                     pos_tags = nltk.pos_tag(words)
                     nouns = [word for word, pos in pos_tags if pos.startswith('NN')]
@@ -145,22 +159,27 @@ class AdvancedHumanizer:
                         remaining = [w for w in words if w not in nouns and w not in verbs]
                         random.shuffle(remaining)
                         new_order.extend(remaining)
-                        return " ".join(new_order)
+                        sentence = " ".join(new_order)
+                        return sentence, [w for w in original_words if w not in new_order or original_words.index(w) != new_order.index(w)]
                 except Exception as e:
                     print(f"Error in POS tagging: {e}")
-            return sentence
+            return sentence, []
         except Exception as e:
             print(f"Error restructuring sentence: {e}")
-            return sentence
+            return sentence, []
 
     def adjust_tone(self, sentence, original_tone):
         try:
+            original = sentence
+            changes = []
             if original_tone == "formal" and random.random() < 0.05:
-                sentence = re.sub(r'\bis\b', "appears", sentence, 1)
-            return sentence
+                if re.search(r'\bis\b', sentence):
+                    sentence = re.sub(r'\bis\b', "appears", sentence, 1)
+                    changes.append("is → appears")
+            return sentence, changes
         except Exception as e:
             print(f"Error adjusting tone: {e}")
-            return sentence
+            return sentence, []
 
     def can_tokenize(self):
         try:
@@ -182,31 +201,43 @@ class AdvancedHumanizer:
     def humanize(self, ai_text, formality_level=50):
         try:
             if not ai_text.strip():
-                return "No text provided to humanize."
+                return "No text provided to humanize.", []
             if self.can_tokenize():
                 sentences = sent_tokenize(ai_text)
             else:
                 sentences = [s.strip() for s in ai_text.split('.') if s.strip()]
             tone = self.detect_tone(ai_text) if self.sentiment_analyzer else "mixed"
             humanized_sentences = []
+            all_changes = []
+
             for sentence in sentences:
                 if not sentence:
                     continue
                 try:
-                    if random.random() < 0.5:  # 50% chance to process—natural variation
-                        sentence = self.replace_ai_phrases(sentence, tone)
-                        sentence = self.vary_sentence_length(sentence, tone)
-                        sentence = self.restructure_sentence(sentence)
-                        sentence = self.add_human_touch(sentence, tone, formality_level)
-                        sentence = self.adjust_tone(sentence, tone)
+                    original = sentence
+                    sentence_changes = []
+                    if random.random() < 0.5:
+                        sentence, changes = self.replace_ai_phrases(sentence, tone)
+                        sentence_changes.extend(changes)
+                        sentence, changes = self.vary_sentence_length(sentence, tone)
+                        sentence_changes.extend(changes)
+                        sentence, changes = self.restructure_sentence(sentence)
+                        sentence_changes.extend(changes)
+                        sentence, changes = self.add_human_touch(sentence, tone, formality_level)
+                        sentence_changes.extend(changes)
+                        sentence, changes = self.adjust_tone(sentence, tone)
+                        sentence_changes.extend(changes)
                     humanized_sentences.append(sentence)
+                    if sentence != original:
+                        all_changes.extend(sentence_changes)
                 except Exception as e:
                     print(f"Error processing sentence '{sentence}': {e}")
                     humanized_sentences.append(sentence)
+
             final_text = " ".join(humanized_sentences).strip()
             if not final_text:
-                return "Humanization resulted in no output. Original text returned."
-            return final_text
+                return "Humanization resulted in no output. Original text returned.", []
+            return final_text, list(set(all_changes))  # Unique changes
         except Exception as e:
             print(f"Critical error in humanization: {e}")
-            return f"Cannot humanize: {str(e)}. Original text: {ai_text}"
+            return f"Cannot humanize: {str(e)}. Original text: {ai_text}", []
