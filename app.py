@@ -22,24 +22,18 @@ def home():
     original_text = session.get('original_text', '')
     humanized_text = session.get('humanized_text', '')
     changes = session.get('changes', [])
-    selected_tone = request.form.get('tone', 'auto') if request.method == 'POST' else 'auto'
+    selected_tone = session.get('tone', 'auto')
 
     if request.method == 'POST':
         action = request.form.get('action')
-        original_text = request.form.get('text', '')
+        original_text = request.form.get('text', '').strip()
+        selected_tone = request.form.get('tone', 'auto')
 
-        if action == 'humanize' and original_text.strip():
+        if action == 'humanize' and original_text:
             session['undo_stack'].append({'input': original_text, 'output': humanized_text, 'changes': changes})
             session['redo_stack'] = []
-            try:
-                humanized_text, changes = humanizer.humanize(original_text)
-                if selected_tone != 'auto':
-                    adjusted_text, tone_changes = humanizer.adjust_tone(humanized_text, selected_tone)
-                    humanized_text = adjusted_text
-                    changes.extend(tone_changes)
-            except Exception as e:
-                humanized_text = f"Error during humanization: {str(e)}. Original: {original_text}"
-                changes = []
+            humanized_text, changes = humanizer.humanize(original_text)
+            session['tone'] = selected_tone
 
         elif action == 'clear':
             session['undo_stack'] = []
@@ -98,13 +92,10 @@ def home():
 
 @app.route('/preview', methods=['POST'])
 def preview():
-    text = request.form.get('text', '')
+    text = request.form.get('text', '').strip()
     tone = request.form.get('tone', 'auto')
-    if text.strip():
+    if text:
         preview_text, changes = humanizer.humanize(text[:100])
-        if tone != 'auto':
-            preview_text, tone_changes = humanizer.adjust_tone(preview_text, tone)
-            changes.extend(tone_changes)
         return jsonify({'preview': preview_text, 'changes': changes})
     return jsonify({'preview': '', 'changes': []})
 

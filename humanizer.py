@@ -9,24 +9,27 @@ class AdvancedHumanizer:
             "Furthermore": ["Moreover", "In addition", "Besides", "Also", "And"],
             "However": ["Nonetheless", "Nevertheless", "Yet", "Still", "Conversely"],
             "Therefore": ["Thus", "Hence", "Consequently", "As a result", "For that reason"],
-            "Dividing": ["Segmenting", "Partitioning", "Splitting", "Separating", "Categorizing"],
+            "Dividing": ["Segmenting", "Partitioning", "Separating", "Categorizing", "Splitting"],
             "Selecting": ["Choosing", "Identifying", "Picking", "Determining", "Targeting"],
-            "Establishing": ["Creating", "Defining", "Building", "Forming", "Setting up"],
-            "visualize": ["illustrate", "depict", "represent", "demonstrate", "show"],
-            "based on": ["relying on", "grounded in", "depending on", "built upon", "drawn from"],
-            "groups": ["categories", "clusters", "segments", "classes", "divisions"],
-            "common": ["shared", "similar", "typical", "mutual", "standard"],
+            "Establishing": ["Creating", "Defining", "Building", "Forming", "Setting"],
+            "visualize": ["illustrate", "depict", "represent", "demonstrate", "portray"],
+            "based on": ["grounded in", "relying on", "derived from", "built upon", "drawn from"],
+            "groups": ["categories", "clusters", "segments", "classes", "collections"],
+            "common": ["shared", "similar", "mutual", "typical", "standard"],
             "characteristics": ["traits", "features", "attributes", "properties", "qualities"],
-            "serve": ["address", "target", "cater to", "assist", "support"],
-            "Strategies": ["Approaches", "Methods", "Techniques", "Tactics", "Plans"],
-            "ranging": ["varying", "spanning", "extending", "covering", "stretching"],
+            "serve": ["address", "target", "support", "assist", "cater to"],
+            "Strategies": ["Approaches", "Methods", "Techniques", "Plans", "Tactics"],
+            "ranging": ["spanning", "varying", "extending", "covering", "stretching"],
             "image": ["identity", "perception", "reputation", "profile", "impression"],
-            "mind": ["perception", "thoughts", "awareness", "view", "consciousness"],
-            "consumer": ["customer", "buyer", "individual", "client", "user"],
-            "tool": ["instrument", "device", "method", "means", "resource"],
-            "used": ["employed", "utilized", "applied", "implemented", "adopted"]
+            "mind": ["perception", "thoughts", "awareness", "consciousness", "view"],
+            "consumer": ["customer", "buyer", "user", "client", "individual"],
+            "tool": ["instrument", "resource", "method", "device", "means"],
+            "used": ["employed", "utilized", "applied", "implemented", "adopted"],
+            "distinct": ["unique", "separate", "specific", "different", "individual"],
+            "market": ["marketplace", "sector", "industry", "field", "arena"],
+            "into": ["within", "across", "among", "throughout", "inside"]
         }
-        self.connectors = ["For instance", "Specifically", "In contrast", "Indeed", "Alternatively"]
+        self.connectors = ["For example", "In particular", "On the contrary", "Notably", "Conversely"]
 
     def get_synonym(self, word):
         word_lower = word.lower()
@@ -35,8 +38,8 @@ class AdvancedHumanizer:
             return choice, [word] if choice.lower() != word_lower else []
         return word, []
 
-    def _split_sentences(self, text):
-        # Simple sentence splitting without NLTK dependency
+    def split_sentences(self, text):
+        # Robust sentence splitting without NLTK
         sentences = re.split(r'(?<=[.!?])\s+', text.strip())
         return [s.strip() for s in sentences if s.strip()]
 
@@ -48,23 +51,31 @@ class AdvancedHumanizer:
             words = original.split()
             changes = []
 
-            # Replace key phrases
+            # Replace phrases and key words
             for phrase, alternatives in self.phrase_map.items():
                 if phrase in sentence:
                     choice = random.choice(alternatives)
                     sentence = sentence.replace(phrase, choice)
                     changes.append(phrase)
 
-            # Synonym substitution
+            # Rewrite with synonyms
             new_words = []
             for word in words:
-                if random.random() < 0.9:  # High chance for change
+                if random.random() < 0.95:  # Near-guaranteed change
                     new_word, word_changes = self.get_synonym(word)
                     new_words.append(new_word)
                     changes.extend(word_changes)
                 else:
                     new_words.append(word)
-            sentence = " ".join(new_words)
+
+            # Reorder clauses (simplified)
+            if len(new_words) > 5:
+                mid = len(new_words) // 2
+                first_half = new_words[:mid]
+                second_half = new_words[mid:]
+                sentence = " ".join(second_half + first_half)
+            else:
+                sentence = " ".join(new_words)
 
             # Add connector
             connector = random.choice(self.connectors)
@@ -86,7 +97,7 @@ class AdvancedHumanizer:
         try:
             if not ai_text.strip():
                 return "No text provided to humanize.", []
-            sentences = self._split_sentences(ai_text)
+            sentences = self.split_sentences(ai_text)
             humanized_sentences = []
             all_changes = []
 

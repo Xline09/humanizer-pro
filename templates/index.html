@@ -123,9 +123,9 @@
     </style>
     <script>
         function copyToClipboard() {
-            const text = document.getElementById('output').innerText;
+            const text = document.getElementById('output').value;
             if (text) {
-                navigator.clipboard.writeText(text.replace(/<[^>]+>/g, '')).then(() => alert('Copied plain text!'));
+                navigator.clipboard.writeText(text).then(() => alert('Copied plain text!'));
             }
         }
 
@@ -162,15 +162,11 @@
         window.onload = function() {
             document.getElementById('input').addEventListener('input', updatePreview);
             document.getElementById('tone').addEventListener('change', updatePreview);
-            updateOutputHighlights();
-        };
-
-        function updateOutputHighlights() {
             const output = document.getElementById('output');
-            const text = output.value || output.innerText;  // Fallback for initial load
+            const text = output.value;
             const changes = {{ changes | tojson }};
             output.innerHTML = highlightChanges(text, changes);
-        }
+        };
     </script>
 </head>
 <body>
