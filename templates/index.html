@@ -13,8 +13,8 @@
             font-family: 'Poppins', sans-serif;
         }
         body {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: #fff;
+            background: #1e1e2f;
+            color: #e0e0e0;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -23,9 +23,9 @@
             transition: all 0.3s ease;
         }
         .container {
-            background: rgba(255, 255, 255, 0.95);
+            background: #2d2d44;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 30px;
             width: 100%;
             max-width: 1200px;
@@ -34,7 +34,7 @@
         h1 {
             text-align: center;
             font-size: 2.5rem;
-            color: #2a5298;
+            color: #66bb6a;
             margin-bottom: 20px;
             font-weight: 700;
         }
@@ -49,16 +49,16 @@
             height: 300px;
             padding: 15px;
             font-size: 1rem;
-            border: 2px solid #ddd;
+            border: 2px solid #555;
             border-radius: 10px;
             resize: vertical;
-            background: #fff;
-            color: #333;
+            background: #3b3b5a;
+            color: #e0e0e0;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         textarea:focus {
-            border-color: #2a5298;
-            box-shadow: 0 0 10px rgba(42, 82, 152, 0.3);
+            border-color: #66bb6a;
+            box-shadow: 0 0 10px rgba(102, 187, 106, 0.3);
             outline: none;
         }
         .toolbar {
@@ -68,28 +68,24 @@
             justify-content: center;
             margin: 20px 0;
         }
-        button, select, input[type="file"], input[type="range"] {
+        button, select, input[type="file"] {
             padding: 12px 20px;
             font-size: 1rem;
             border: none;
             border-radius: 25px;
             cursor: pointer;
-            background: #2a5298;
+            background: #66bb6a;
             color: #fff;
             transition: transform 0.2s ease, background 0.3s ease;
         }
         button:hover, select:hover, input[type="file"]:hover {
             transform: translateY(-2px);
-            background: #1e3c72;
-        }
-        input[type="range"] {
-            background: transparent;
-            width: 150px;
+            background: #5ca863;
         }
         .stats {
             text-align: center;
             font-size: 0.9rem;
-            color: #666;
+            color: #bbb;
             margin: 10px 0;
         }
         .preview {
@@ -115,7 +111,7 @@
                 flex-direction: column;
                 align-items: center;
             }
-            button, select, input[type="file"], input[type="range"] {
+            button, select, input[type="file"] {
                 width: 100%;
                 max-width: 200px;
             }
@@ -126,10 +122,6 @@
         }
     </style>
     <script>
-        function toggleTheme() {
-            // Optional: Add theme toggle logic if desired
-        }
-
         function copyToClipboard() {
             const text = document.getElementById('output').innerText;
             if (text) {
@@ -145,11 +137,10 @@
         function updatePreview() {
             const text = document.getElementById('input').value;
             const tone = document.getElementById('tone').value;
-            const formality = document.getElementById('formality').value;
             fetch('/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `text=${encodeURIComponent(text)}&tone=${tone}&formality=${formality}`
+                body: `text=${encodeURIComponent(text)}&tone=${tone}`
             })
             .then(response => response.json())
             .then(data => {
@@ -170,7 +161,6 @@
         window.onload = function() {
             document.getElementById('input').addEventListener('input', updatePreview);
             document.getElementById('tone').addEventListener('change', updatePreview);
-            document.getElementById('formality').addEventListener('input', updatePreview);
             updateOutputHighlights();
         };
 
@@ -208,7 +198,6 @@
                 <button type="button" onclick="submitForm('undo')" {% if not can_undo %}disabled{% endif %}>Undo</button>
                 <button type="button" onclick="submitForm('redo')" {% if not can_redo %}disabled{% endif %}>Redo</button>
                 <button type="button" onclick="submitForm('save')">Save TXT</button>
-                <button type="button" onclick="submitForm('save_pdf')">Save PDF</button>
                 <button type="button" onclick="copyToClipboard()">Copy</button>
                 <input type="file" name="file" onchange="submitForm('upload')" accept=".txt,.docx">
                 <select id="tone" name="tone">
@@ -217,8 +206,6 @@
                     <option value="formal" {% if tone == 'formal' %}selected{% endif %}>Formal</option>
                     <option value="mixed" {% if tone == 'mixed' %}selected{% endif %}>Mixed</option>
                 </select>
-                <label for="formality">Formality: {{ formality }}%</label>
-                <input type="range" id="formality" name="formality" min="0" max="100" value="{{ formality }}">
             </div>
 
             <input type="hidden" id="action" name="action" value="">
