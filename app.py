@@ -4,8 +4,6 @@ from io import BytesIO
 import os
 from werkzeug.utils import secure_filename
 from docx import Document
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'
@@ -36,10 +34,11 @@ def home():
             try:
                 humanized_text, changes = humanizer.humanize(original_text)
                 if selected_tone != 'auto':
-                    humanized_text, tone_changes = humanizer.adjust_tone(humanized_text, selected_tone)
+                    adjusted_text, tone_changes = humanizer.adjust_tone(humanized_text, selected_tone)
+                    humanized_text = adjusted_text
                     changes.extend(tone_changes)
             except Exception as e:
-                humanized_text = f"Failed to humanize: {str(e)}. Original: {original_text}"
+                humanized_text = f"Error during humanization: {str(e)}. Original: {original_text}"
                 changes = []
 
         elif action == 'clear':

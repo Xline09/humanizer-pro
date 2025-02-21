@@ -5,7 +5,6 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import wordnet, stopwords
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import string
-import difflib
 
 try:
     nltk.download('punkt', quiet=True)
@@ -27,7 +26,7 @@ class AdvancedHumanizer:
             "However": ["Nonetheless", "Nevertheless", "Yet", "Still", "Conversely"],
             "Therefore": ["Thus", "Hence", "Consequently", "As a result", "For that reason"]
         }
-        self.connectors = ["For instance", "Specifically", "In contrast", "On the other hand", "Indeed"]
+        self.connectors = ["For instance", "Specifically", "In contrast", "Indeed", "On the contrary"]
         self.stop_words = set(stopwords.words('english'))
         try:
             self.sentiment_analyzer = SentimentIntensityAnalyzer()
@@ -97,8 +96,10 @@ class AdvancedHumanizer:
 
     def paraphrase_sentence(self, sentence, tone):
         try:
-            original = sentence
-            words = self._safe_tokenize(sentence)
+            original = sentence.strip()
+            if not original:
+                return original, []
+            words = self._safe_tokenize(original)
             pos_tags = nltk.pos_tag(words)
             changes = []
 
@@ -113,7 +114,7 @@ class AdvancedHumanizer:
             # Synonym substitution for key words
             new_words = []
             for word, pos in pos_tags:
-                if random.random() < 0.8 and word.lower() not in self.stop_words:  # High chance for change
+                if random.random() < 0.85 and word.lower() not in self.stop_words:  # High chance for change
                     new_word, word_changes = self.get_synonym(word, pos)
                     new_words.append(new_word)
                     changes.extend(word_changes)
@@ -122,29 +123,28 @@ class AdvancedHumanizer:
             sentence = " ".join(new_words)
 
             # Restructure sentence
-            if len(words) > 4:
-                if random.random() < 0.9:  # High chance for restructuring
-                    pos_tags = nltk.pos_tag(self._safe_tokenize(sentence))
-                    nouns = [w for w, p in pos_tags if p.startswith('NN')]
-                    verbs = [w for w, p in pos_tags if p.startswith('VB')]
-                    if nouns and verbs:
-                        new_order = []
-                        new_order.extend(random.sample(nouns, min(2, len(nouns))))
-                        new_order.extend(random.sample(verbs, min(1, len(verbs))))
-                        remaining = [w for w, p in pos_tags if not (p.startswith('NN') or p.startswith('VB'))]
-                        random.shuffle(remaining)
-                        new_order.extend(remaining)
-                        sentence = " ".join(new_order)
-                        changes.extend([w for w in words if w not in new_order or words.index(w) != new_order.index(w)])
+            if len(words) > 3:  # Apply to shorter sentences
+                pos_tags = nltk.pos_tag(self._safe_tokenize(sentence))
+                nouns = [w for w, p in pos_tags if p.startswith('NN')]
+                verbs = [w for w, p in pos_tags if p.startswith('VB')]
+                if nouns and verbs and random.random() < 0.95:  # Near-guaranteed restructuring
+                    new_order = []
+                    new_order.extend(random.sample(nouns, min(2, len(nouns))))
+                    new_order.extend(random.sample(verbs, min(1, len(verbs))))
+                    remaining = [w for w, p in pos_tags if not (p.startswith('NN') or p.startswith('VB'))]
+                    random.shuffle(remaining)
+                    new_order.extend(remaining)
+                    sentence = " ".join(new_order)
+                    changes.extend([w for w in words if w not in new_order or words.index(w) != new_order.index(w)])
 
-            # Add connector or phrase
-            if random.random() < 0.7:  # High chance for variation
+            # Add connector for variation
+            if random.random() < 0.8:
                 connector = random.choice(self.connectors)
                 sentence = f"{connector}, {sentence.lower()}"
                 changes.append(connector)
 
-            # Adjust tone with subtle rephrasing
-            if tone == "formal" and random.random() < 0.8:
+            # Adjust tone with professional rephrasing
+            if tone == "formal" and random.random() < 0.9:
                 if "is" in sentence:
                     sentence = sentence.replace("is", "appears to be", 1)
                     changes.append("is → appears to be")
@@ -152,8 +152,11 @@ class AdvancedHumanizer:
                     sentence = sentence.replace("will", "may", 1)
                     changes.append("will → may")
 
-            # Capitalize first letter
+            # Capitalize first letter and ensure ending punctuation
             sentence = sentence[0].upper() + sentence[1:]
+            if not sentence.endswith(('.', '?', '!')):
+                sentence += '.'
+                changes.append('.')
 
             return sentence, changes if sentence != original else []
         except Exception as e:
@@ -176,12 +179,9 @@ class AdvancedHumanizer:
                 if not sentence:
                     continue
                 try:
-                    original = sentence
-                    # Always paraphrase—ensure transformation
                     humanized, changes = self.paraphrase_sentence(sentence, tone)
                     humanized_sentences.append(humanized)
-                    if humanized != original:
-                        all_changes.extend(changes)
+                    all_changes.extend(changes)
                 except Exception as e:
                     print(f"Error processing sentence '{sentence}': {e}")
                     humanized_sentences.append(sentence)
