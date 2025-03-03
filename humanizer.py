@@ -3,21 +3,32 @@ import re
 
 class AdvancedHumanizer:
     def __init__(self):
-        # Comprehensive vocabulary for academic/business rewriting
+        # Expanded vocabulary for academic/business rewriting
         self.vocab = {
             "nouns": {
                 "market": ["marketplace", "sector", "industry", "domain", "arena"],
-                "groups": ["categories", "clusters", "segments", "divisions", "classes"],
+                "groups": ["categories", "clusters", "segments", "divisions", "collections"],
                 "characteristics": ["attributes", "traits", "features", "qualities", "properties"],
-                "strategy": ["approach", "method", "framework", "tactic", "plan"],
+                "strategy": ["approach", "method", "framework", "plan", "tactic"],
                 "segments": ["sectors", "portions", "areas", "parts", "divisions"],
                 "image": ["identity", "reputation", "profile", "impression", "persona"],
                 "mind": ["perception", "awareness", "consciousness", "perspective", "view"],
-                "consumer": ["customer", "client", "buyer", "user", "individual"],
-                "tool": ["instrument", "resource", "mechanism", "apparatus", "method"],
+                "consumer": ["customer", "client", "user", "buyer", "individual"],
+                "tool": ["instrument", "resource", "mechanism", "method", "apparatus"],
                 "perceptions": ["views", "impressions", "insights", "judgments", "opinions"],
                 "brands": ["entities", "products", "offerings", "labels", "marks"],
                 "competitors": ["rivals", "peers", "adversaries", "contenders", "opponents"],
+                "study": ["exploration", "analysis", "investigation", "examination", "research"],
+                "time": ["duration", "period", "interval", "timing", "chronology"],
+                "motion": ["movement", "activity", "kinetics", "dynamics", "mobility"],
+                "field": ["discipline", "area", "domain", "realm", "sphere"],
+                "tasks": ["activities", "duties", "operations", "functions", "assignments"],
+                "efficiency": ["effectiveness", "productivity", "performance", "optimality", "streamlining"],
+                "development": ["evolution", "progress", "advancement", "growth", "refinement"],
+                "management": ["administration", "oversight", "direction", "control", "governance"],
+                "studies": ["analyses", "inquiries", "researches", "investigations", "examinations"],
+                "ways": ["methods", "techniques", "approaches", "means", "processes"],
+                "figures": ["contributors", "pioneers", "leaders", "innovators", "practitioners"]
             },
             "verbs": {
                 "Designing": ["Crafting", "Formulating", "Devising", "Shaping", "Developing"],
@@ -28,28 +39,46 @@ class AdvancedHumanizer:
                 "serve": ["address", "support", "cater to", "assist", "engage"],
                 "used": ["employed", "utilized", "applied", "leveraged", "implemented"],
                 "ranging": ["spanning", "extending", "covering", "varying", "encompassing"],
+                "pioneered": ["initiated", "originated", "spearheaded", "introduced", "established"],
+                "known": ["recognized", "acknowledged", "noted", "famed", "celebrated"],
+                "focused": ["concentrated", "emphasized", "centered", "prioritized", "directed"],
+                "improve": ["enhance", "boost", "elevate", "optimize", "refine"],
+                "analyzing": ["examining", "assessing", "evaluating", "investigating", "reviewing"],
+                "determining": ["establishing", "defining", "ascertaining", "specifying", "identifying"],
+                "perform": ["execute", "carry out", "conduct", "accomplish", "undertake"],
+                "sought": ["aimed", "strived", "endeavored", "pursued", "intended"],
+                "eliminate": ["remove", "eradicate", "exclude", "reduce", "abolish"],
+                "increase": ["enhance", "elevate", "boost", "amplify", "augment"],
+                "emphasized": ["highlighted", "stressed", "accentuated", "prioritized", "underlined"],
+                "making": ["rendering", "establishing", "constituting", "forming", "shaping"]
             },
             "adjectives": {
                 "common": ["shared", "mutual", "typical", "similar", "standard"],
                 "distinct": ["unique", "specific", "separate", "individual", "particular"],
                 "attractive": ["appealing", "desirable", "compelling", "engaging", "noteworthy"],
                 "specific": ["precise", "targeted", "focused", "defined", "exact"],
+                "efficient": ["effective", "optimal", "productive", "streamlined", "practical"],
+                "significant": ["notable", "important", "substantial", "key", "prominent"],
+                "unnecessary": ["redundant", "excessive", "superfluous", "unneeded", "extraneous"],
+                "complementary": ["supportive", "synergistic", "enhancing", "auxiliary", "cooperative"]
             },
             "prepositions": {
                 "based on": ["grounded in", "derived from", "built upon", "informed by", "stemming from"],
                 "into": ["within", "across", "among", "throughout", "inside"],
                 "relative to": ["compared with", "in relation to", "versus", "against", "concerning"],
                 "on": ["upon", "in", "through", "via", "with"],
+                "by": ["through", "via", "using", "with", "per"],
+                "to": ["toward", "for", "in", "at", "regarding"]
             },
-            "connectors": ["In essence", "Notably", "For instance", "In particular", "Conversely", "Specifically", "On the other hand"]
+            "connectors": ["In essence", "Notably", "For example", "In particular", "Conversely", "Moreover", "Thus"]
         }
         # Sentence structure templates for full rewrite
         self.templates = [
-            lambda subj, verb, obj, mod: f"{verb} {obj}, {subj} reflects a focus on {mod}",
-            lambda subj, verb, obj, mod: f"{subj} employs {verb} to shape {obj} through {mod}",
-            lambda subj, verb, obj, mod: f"The process of {verb} {obj} by {subj} hinges on {mod}",
-            lambda subj, verb, obj, mod: f"{subj}, via {verb}, constructs {obj} with attention to {mod}",
-            lambda subj, verb, obj, mod: f"{verb} {obj} represents {subj}’s approach to {mod}"
+            lambda subj, verb, obj, mod: f"{subj} {verb} {obj} with a focus {mod}",
+            lambda subj, verb, obj, mod: f"The aim of {subj} in {verb} {obj} centers {mod}",
+            lambda subj, verb, obj, mod: f"{verb} {obj}, as pursued by {subj}, relies {mod}",
+            lambda subj, verb, obj, mod: f"{subj} leverages {verb} to achieve {obj} through {mod}",
+            lambda subj, verb, obj, mod: f"To {verb} {obj}, {subj} adopts an approach shaped {mod}"
         ]
 
     def get_synonym(self, word, category="nouns"):
@@ -66,11 +95,12 @@ class AdvancedHumanizer:
 
     def decompose_sentence(self, sentence):
         words = sentence.split()
+        # Identify core components with fallbacks
         subject = next((word for word in words if word.lower() in self.vocab["nouns"]), "This")
         verb = next((word for word in words if word.lower() in self.vocab["verbs"]), "involves")
         obj = next((word for word in words if word.lower() in self.vocab["nouns"] and word != subject), "process")
         modifiers = " ".join([w for w in words if w not in (subject, verb, obj) and w not in self.vocab["connectors"]])
-        return subject, verb, obj, modifiers if modifiers else "various elements"
+        return subject, verb, obj, modifiers if modifiers else "various aspects"
 
     def paraphrase_sentence(self, sentence):
         try:
@@ -79,7 +109,7 @@ class AdvancedHumanizer:
                 return original, []
             changes = []
 
-            # Decompose sentence
+            # Decompose into subject, verb, object, modifiers
             subject, verb, obj, modifiers = self.decompose_sentence(original)
 
             # Replace with synonyms
@@ -139,7 +169,7 @@ class AdvancedHumanizer:
             final_text = " ".join(humanized_sentences).strip()
             if not final_text:
                 return "Humanization resulted in no output. Original text returned.", []
-            return final_text, list(set(all_changes))
+            return final_text
         except Exception as e:
             print(f"Critical error in humanization: {e}")
-            return f"Cannot humanize: {str(e)}. Original text: {ai_text}", []
+            return f"Cannot humanize: {str(e)}. Original text: {ai_text}"

@@ -94,12 +94,6 @@
             margin-top: 10px;
             text-align: center;
         }
-        .highlight {
-            background: #ffeb3b;
-            padding: 2px 5px;
-            border-radius: 3px;
-            color: #333;
-        }
         @media (max-width: 768px) {
             .editor {
                 grid-template-columns: 1fr;
@@ -145,27 +139,14 @@
             .then(response => response.json())
             .then(data => {
                 const preview = document.getElementById('preview');
-                preview.innerHTML = highlightChanges(data.preview, data.changes);
+                preview.textContent = data.preview;  // Plain text, no highlights
             })
             .catch(error => console.error('Preview error:', error));
-        }
-
-        function highlightChanges(text, changes) {
-            let highlighted = text;
-            changes.forEach(change => {
-                const regex = new RegExp(`\\b${change}\\b`, 'gi');
-                highlighted = highlighted.replace(regex, `<span class="highlight">$&</span>`);
-            });
-            return highlighted;
         }
 
         window.onload = function() {
             document.getElementById('input').addEventListener('input', updatePreview);
             document.getElementById('tone').addEventListener('change', updatePreview);
-            const output = document.getElementById('output');
-            const text = output.value;
-            const changes = {{ changes | tojson }};
-            output.innerHTML = highlightChanges(text, changes);
         };
     </script>
 </head>
