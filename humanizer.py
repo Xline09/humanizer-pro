@@ -2,12 +2,11 @@ import random
 import re
 from transformers import AutoTokenizer, AutoModel
 import torch
-import os
 import numpy as np
+import os
 
 class AdvancedHumanizer:
     def __init__(self):
-        # Load pre-downloaded model and tokenizer
         model_dir = os.path.join(os.path.dirname(__file__), "paraphrase-MiniLM-L6-v2")
         if not os.path.exists(model_dir):
             raise ValueError(f"Model directory {model_dir} not found. Ensure 'paraphrase-MiniLM-L6-v2' is included.")
@@ -16,7 +15,6 @@ class AdvancedHumanizer:
         self.device = torch.device("cpu")
         self.model.to(self.device)
 
-        # Academic vocabulary for reconstruction
         self.polish_vocab = {
             "nouns": {
                 "study": ["investigation", "research", "analysis", "inquiry"],
@@ -35,7 +33,19 @@ class AdvancedHumanizer:
                 "market": ["marketplace", "sector", "industry"],
                 "groups": ["categories", "clusters", "segments"],
                 "strategy": ["approach", "framework", "plan"],
-                "image": ["identity", "reputation", "profile"]
+                "image": ["identity", "reputation", "profile"],
+                "sky": ["heavens", "firmament", "atmosphere"],
+                "breeze": ["wind", "gust", "zephyr"],
+                "leaves": ["foliage", "branches", "greenery"],
+                "path": ["trail", "route", "passage"],
+                "life": ["existence", "journey", "being"],
+                "peace": ["tranquility", "calm", "serenity"],
+                "crickets": ["insects", "chirpers", "nocturnal sounds"],
+                "owl": ["bird", "night hunter", "hoot"],
+                "breath": ["inhalation", "respiration", "sigh"],
+                "opportunities": ["possibilities", "prospects", "chances"],
+                "hope": ["optimism", " aspiration", "confidence"],
+                "strength": ["resilience", "fortitude", "vigor"]
             },
             "verbs": {
                 "pioneered": ["initiated", "spearheaded", "originated"],
@@ -54,15 +64,29 @@ class AdvancedHumanizer:
                 "is": ["stands as", "remains", "represents"],
                 "dividing": ["segmenting", "partitioning", "separating"],
                 "selecting": ["choosing", "targeting", "picking"],
-                "establishing": ["defining", "creating", "forming"]
+                "establishing": ["defining", "creating", "forming"],
+                "dipped": ["descended", "sank", "settled"],
+                "painting": ["coloring", "tinting", "adorning"],
+                "rustled": ["stirred", "swayed", "fluttered"],
+                "whispering": ["murmuring", "hissing", "muttering"],
+                "walked": ["strolled", "ambled", "proceeded"],
+                "lost": ["immersed", "engrossed", "absorbed"],
+                "filled": ["laden", "brimming", "packed"],
+                "felt": ["experienced", "sensed", "perceived"],
+                "continued": ["persisted", "endured", "proceeded"],
+                "reminded": ["prompted", "recalled", "evoked"],
+                "took": ["drew", "inhaled", "captured"],
+                "embracing": ["accepting", "welcoming", "enfolding"],
+                "bring": ["present", "offer", "deliver"],
+                "face": ["confront", "meet", "tackle"]
             },
             "connectors": ["In essence", "Notably", "For instance", "In particular", "Conversely", "Moreover", "Thus"]
         }
         self.templates = [
             "{conn}, {subj} {verb} {obj} {mod}",
-            "{conn}, the {obj} {verb} by {subj} advances {mod}",
-            "{conn}, through {verb} {obj}, {subj} leverages {mod}",
-            "{conn}, {subj}’s {verb} of {obj} reflects {mod}"
+            "{conn}, through {verb} {obj}, {subj} advances {mod}",
+            "{conn}, the {obj} {verb} by {subj} reflects {mod}",
+            "{conn}, {subj}’s {verb} of {obj} enhances {mod}"
         ]
 
     def split_sentences(self, text):
@@ -76,20 +100,27 @@ class AdvancedHumanizer:
         return outputs.last_hidden_state.mean(dim=1).cpu().numpy()
 
     def paraphrase(self, text):
-        # Simple paraphrasing: extract key terms, reconstruct with template
         words = text.split()
-        subj = next((w for w in words if w.lower() in self.polish_vocab["nouns"] or w in ["Frederick", "Frank", "Lillian", "Taylor", "Gilbreths"]), "research")
-        verb = next((w for w in words if w.lower() in self.polish_vocab["verbs"]), "explored")
-        obj = next((w for w in words if w.lower() in self.polish_vocab["nouns"] and w != subj), "concepts")
+        # Extract subject (proper nouns or key nouns)
+        subj = next((w for w in words if w[0].isupper() or w.lower() in self.polish_vocab["nouns"]), "nature")
+        # Extract verb
+        verb = next((w for w in words if w.lower() in self.polish_vocab["verbs"]), "occurred")
+        # Extract object (nouns after verb)
+        obj_candidates = [w for w in words[words.index(verb) if verb in words else 0:] if w.lower() in self.polish_vocab["nouns"] and w != subj]
+        obj = obj_candidates[0] if obj_candidates else "scene"
+        # Remaining as modifier
         mod = " ".join([w for w in words if w not in [subj, verb, obj] and w not in self.polish_vocab["connectors"]])
 
-        new_subj = subj if subj in ["Frederick", "Frank", "Lillian", "Taylor", "Gilbreths"] else self.get_synonym(subj.lower(), "nouns")[0]
+        # Replace with synonyms
+        new_subj = subj if subj[0].isupper() else self.get_synonym(subj.lower(), "nouns")[0]
         new_verb = self.get_synonym(verb.lower(), "verbs")[0]
         new_obj = self.get_synonym(obj.lower(), "nouns")[0]
         new_mod = self.polish_text(mod)
 
+        # Apply template with proper connector substitution
+        conn = random.choice(self.polish_vocab["connectors"])
         template = random.choice(self.templates)
-        return template.format(conn="{conn}", subj=new_subj, verb=new_verb, obj=new_obj, mod=new_mod)
+        return template.format(conn=conn, subj=new_subj, verb=new_verb, obj=new_obj, mod=new_mod)
 
     def polish_text(self, text):
         words = text.split()
@@ -122,9 +153,7 @@ class AdvancedHumanizer:
                 if not sentence:
                     continue
                 paraphrased = self.paraphrase(sentence)
-                connector = random.choice(self.polish_vocab["connectors"])
-                humanized = f"{connector}, {paraphrased[0].lower() + paraphrased[1:]}"
-                humanized = humanized[0].upper() + humanized[1:]
+                humanized = paraphrased[0].upper() + paraphrased[1:]
                 if not humanized.endswith(('.', '?', '!')):
                     humanized += '.'
                 humanized_sentences.append(humanized)
